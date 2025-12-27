@@ -784,3 +784,16 @@ body {
         height: auto;
     }
 }
+
+/* Value Difference Colors */
+.diff-dec {
+    color: #2563eb;
+    /* Blue for negative/decrease */
+    font-weight: 600;
+}
+
+.diff-inc {
+    color: #dc2626;
+    /* Red for positive/increase */
+    font-weight: 600;
+}

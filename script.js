@@ -2300,16 +2300,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const sizeMB = (blob.size / (1024 * 1024)).toFixed(2);
             const origSizeMB = (currentFile.size / (1024 * 1024));
 
-            // Calculate Savings
-            const savedBytes = currentFile.size - blob.size;
-            const savedPct = ((savedBytes / currentFile.size) * 100).toFixed(1);
-            let resultNote = '';
-            if (savedBytes > 0) resultNote = `<span style="color:var(--secondary-color); font-weight:bold;">(-${savedPct}%)</span>`;
-            else resultNote = `<span style="color:var(--accent-color);">(${savedPct}%)</span>`;
-
             resizedGifInfoContainer.innerHTML = `
                 <div class="info-item"><span class="info-label">Dimens</span><span class="info-value">${width} x ${height}</span></div>
-                <div class="info-item"><span class="info-label">Size</span><span class="info-value">${sizeMB} MB ${resultNote}</span></div>
+                <div class="info-item"><span class="info-label">Size</span>${getDiffHtml(origSizeMB, parseFloat(sizeMB), true, ' MB')}</div>
                 <div class="info-item"><span class="info-label">Frames</span><span class="info-value">${framesCount}</span></div>
                 <div class="info-item"><span class="info-label">Mode</span><span class="info-value">${options.deltaCompression ? 'Delta' : 'Normal'}</span></div>
             `;
