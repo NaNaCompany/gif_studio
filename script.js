@@ -2452,14 +2452,6 @@ document.addEventListener('DOMContentLoaded', () => {
             convertProgressText.innerText = '0%';
             convertStatusText.innerText = 'Preparing...';
 
-            // HIDE LEFT PANEL (Preview Area)
-            document.querySelector('.preview-area').classList.add('hidden');
-            // Center Control Panel (Optional, but "hidden" effectively removes layout space if flex)
-            // editor-layout is flex. If preview-area is hidden, control-panel takes left or full width depending on css.
-            // .preview-area { flex: 1; } .control-panel { width: 350px; }
-            // If preview-area is display:none, control-panel stays 350px on left. 
-            // To Center: .editor-layout { justify-content: center; } could be added dynamically or just leave as is.
-
             const reader = new FileReader();
             reader.readAsArrayBuffer(currentFile);
             reader.onload = function (e) {
@@ -2593,11 +2585,6 @@ document.addEventListener('DOMContentLoaded', () => {
         convertGoBtn.disabled = false;
         convertBackBtn.disabled = false;
         convertProgress.classList.add('hidden');
-
-        // Show Left Panel Again? 
-        // "Convert기능 사용중에는 왼쪽 캔버스 패널은 만들지 않음"
-        // After convert is done, should we return to normal state? Usually yes.
-        document.querySelector('.preview-area').classList.remove('hidden');
 
         // Hide convert panel?
         convertPanel.classList.add('hidden');
