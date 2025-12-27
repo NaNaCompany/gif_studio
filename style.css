@@ -393,12 +393,37 @@ body {
 }
 
 /* Cut Tool Dual Sliders */
-.dual-slider-container {
+.dual-range-container {
     position: relative;
-    isolation: isolate;
+    width: 100%;
+    height: 30px;
+    margin: 1.5rem 0;
 }
 
-.dual-slider-container input[type=range] {
+.range-track {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 0;
+    width: 100%;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    z-index: 1;
+}
+
+.range-highlight {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 6px;
+    background: var(--primary-color);
+    z-index: 2;
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.dual-range-container input[type=range] {
     position: absolute;
     top: 0;
     left: 0;
@@ -410,10 +435,10 @@ body {
     -webkit-appearance: none;
     appearance: none;
     background: transparent;
-    z-index: 10;
+    z-index: 3;
 }
 
-.dual-slider-container input[type=range]::-webkit-slider-thumb {
+.dual-range-container input[type=range]::-webkit-slider-thumb {
     pointer-events: auto;
     -webkit-appearance: none;
     appearance: none;
@@ -424,10 +449,15 @@ body {
     border-radius: 50%;
     cursor: grab;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    /* Improve vertical alignment if needed */
+    margin-top: -9px;
+    /* Adjust for vertical centering if needed, relative to track logic usually */
+    /* Since we set height 100% on input, centering might depend. 
+       Actually, standard "vertical-align" inside input is tricky.
+       Let's stick to simple props. margin-top often needed in webkit for custom track. */
 }
 
-.dual-slider-container input[type=range]::-moz-range-thumb {
+/* Firefox */
+.dual-range-container input[type=range]::-moz-range-thumb {
     pointer-events: auto;
     width: 24px;
     height: 24px;
@@ -437,7 +467,6 @@ body {
     cursor: grab;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     border: none;
-    /* Reset */
     border: 3px solid var(--primary-color);
 }
 
