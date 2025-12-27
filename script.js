@@ -2568,6 +2568,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingOverlay.classList.remove('hidden');
 
         resizedCard.classList.remove('hidden'); // Re-use output card
+        document.querySelector('#resized-card h3').innerText = 'Cut GIF';
 
         // Use GIF.js to re-encode
         const ReaderClass = window.GifReader || (window.omggif && window.omggif.GifReader) || (window.Omggif && window.Omggif.GifReader);
