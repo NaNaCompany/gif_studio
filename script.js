@@ -2055,318 +2055,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- CUT TOOL Logic ---
-    const cutPanel = document.getElementById('cut-panel');
-    const cutBtn = document.querySelector('button[data-tool="cut"]');
-    const cutBackBtn = document.getElementById('cut-back-btn');
-    const cutGoBtn = document.getElementById('cut-go-btn');
-    const cutStartSlider = document.getElementById('cut-start-slider');
-    const cutEndSlider = document.getElementById('cut-end-slider');
-    const cutSliderRange = document.getElementById('cut-slider-range');
-    const cutStartLabel = document.getElementById('cut-start-label');
-    const cutEndLabel = document.getElementById('cut-end-label');
 
-    // Preview Elements
-    const cutPrevStartCanvas = document.querySelector('#cut-preview-start canvas');
-    const cutPrevEndCanvas = document.querySelector('#cut-preview-end canvas');
-    const cutLoadingInd = document.getElementById('cut-loading-indicator');
-    const cutLoadingPct = document.getElementById('cut-loading-pct');
-
-    let cutTotalFrames = 0;
-    let cutFramesCache = []; // Array of Canvases
-
-    function updateCutSliderVisuals() {
-        if (!cutStartSlider || !cutEndSlider) return;
-        const min = parseInt(cutStartSlider.min);
-        const max = parseInt(cutStartSlider.max);
-        const startVal = parseInt(cutStartSlider.value);
-        const endVal = parseInt(cutEndSlider.value);
-
-        // Percentages
-        const range = max - min;
-        const leftPct = ((startVal - min) / range) * 100;
-        const widthPct = ((endVal - min) / range) * 100 - leftPct;
-
-        if (cutSliderRange) {
-            cutSliderRange.style.left = leftPct + '%';
-            cutSliderRange.style.width = widthPct + '%';
-        }
-
-        if (cutStartLabel) cutStartLabel.innerText = `Start: ${startVal + 1}`;
-        if (cutEndLabel) cutEndLabel.innerText = `End: ${endVal + 1}`;
-
-        // Update Previews from Cache
-        if (cutFramesCache[startVal] && cutPrevStartCanvas) {
-            const ctx = cutPrevStartCanvas.getContext('2d');
-            // Resize canvas if needed (once)
-            if (cutPrevStartCanvas.width !== cutFramesCache[startVal].width) {
-                cutPrevStartCanvas.width = cutFramesCache[startVal].width;
-                cutPrevStartCanvas.height = cutFramesCache[startVal].height;
-            }
-            ctx.drawImage(cutFramesCache[startVal], 0, 0);
-        }
-
-        if (cutFramesCache[endVal] && cutPrevEndCanvas) {
-            const ctx = cutPrevEndCanvas.getContext('2d');
-            if (cutPrevEndCanvas.width !== cutFramesCache[endVal].width) {
-                cutPrevEndCanvas.width = cutFramesCache[endVal].width;
-                cutPrevEndCanvas.height = cutFramesCache[endVal].height;
-            }
-            ctx.drawImage(cutFramesCache[endVal], 0, 0);
-        }
-    }
-
-    if (cutBtn) {
-        cutBtn.addEventListener('click', () => {
-            if (currentFile) {
-                // UI Reset
-                mainToolsGrid.classList.add('hidden');
-                cutPanel.classList.remove('hidden');
-
-                if (cutLoadingInd) cutLoadingInd.classList.remove('hidden');
-                cutFramesCache = []; // Clear Cache
-
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const ReaderClass = window.GifReader || (window.omggif && window.omggif.GifReader) || (window.Omggif && window.Omggif.GifReader);
-                    if (ReaderClass) {
-                        const gr = new ReaderClass(new Uint8Array(e.target.result));
-                        cutTotalFrames = gr.numFrames();
-
-                        cutStartSlider.min = 0;
-                        cutStartSlider.max = cutTotalFrames - 1;
-                        cutStartSlider.value = 0;
-
-                        cutEndSlider.min = 0;
-                        cutEndSlider.max = cutTotalFrames - 1;
-                        cutEndSlider.value = cutTotalFrames - 1;
-
-                        // Start Cache Process
-                        cacheAllFrames(gr);
-                    }
-                };
-                reader.readAsArrayBuffer(currentFile);
-            }
-        });
-    }
-
-    function cacheAllFrames(reader) {
-        const num = reader.numFrames();
-        const width = reader.width;
-        const height = reader.height;
-
-        let idx = 0;
-
-        // Temp buffers
-        const tempC = document.createElement('canvas');
-        tempC.width = width;
-        tempC.height = height;
-        const tempCtx = tempC.getContext('2d', { willReadFrequently: true });
-        const imgData = tempCtx.createImageData(width, height);
-
-        function processBatch() {
-            const start = performance.now();
-            while (idx < num) {
-                try {
-                    reader.decodeAndBlitFrameRGBA(idx, imgData.data);
-                    tempCtx.putImageData(imgData, 0, 0);
-
-                    // Snapshot
-                    const frameC = document.createElement('canvas');
-                    frameC.width = width;
-                    frameC.height = height;
-                    frameC.getContext('2d').drawImage(tempC, 0, 0);
-                    cutFramesCache[idx] = frameC;
-
-                } catch (e) { console.error(e); }
-
-                idx++;
-
-                // UI Update
-                if (cutLoadingPct) cutLoadingPct.innerText = Math.floor((idx / num) * 100) + '%';
-
-                // Initial update for visual feedback
-                if (idx === 1 || idx === num) updateCutSliderVisuals();
-
-                if (performance.now() - start > 15) {
-                    requestAnimationFrame(processBatch);
-                    return;
-                }
-            }
-
-            // Done
-            if (cutLoadingInd) cutLoadingInd.classList.add('hidden');
-        }
-
-        processBatch();
-    }
-
-    if (cutBackBtn) {
-        cutBackBtn.addEventListener('click', () => {
-            cutPanel.classList.add('hidden');
-            mainToolsGrid.classList.remove('hidden');
-        });
-    }
-
-    // Slider Logic
-    if (cutStartSlider && cutEndSlider) {
-        cutStartSlider.addEventListener('input', () => {
-            let s = parseInt(cutStartSlider.value);
-            let e = parseInt(cutEndSlider.value);
-            if (s >= e) {
-                cutStartSlider.value = e - 1;
-            }
-            updateCutSliderVisuals();
-        });
-
-        cutEndSlider.addEventListener('input', () => {
-            let s = parseInt(cutStartSlider.value);
-            let e = parseInt(cutEndSlider.value);
-            if (e <= s) {
-                cutEndSlider.value = s + 1;
-            }
-            updateCutSliderVisuals();
-        });
-    }
-
-    if (cutGoBtn) {
-        cutGoBtn.addEventListener('click', () => {
-            const start = parseInt(cutStartSlider.value);
-            const end = parseInt(cutEndSlider.value);
-
-            // UI Prep
-            if (currentResizedBlob) {
-                const currentTitle = document.querySelector('#resized-card h3').innerText;
-                createHistoryCard(currentResizedBlob, resizedGifInfoContainer.innerHTML, currentTitle);
-            }
-
-            const progressContainer = document.getElementById('cut-progress-container');
-            const progressFill = document.getElementById('cut-progress-fill');
-            const progressText = document.getElementById('cut-progress-text');
-            progressContainer.classList.remove('hidden');
-            progressFill.style.width = '0%';
-            progressText.innerText = '0%';
-
-            cutGoBtn.disabled = true;
-            cutBackBtn.disabled = true;
-
-            originalContent.classList.add('hidden');
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            resizedCard.classList.remove('hidden');
-            document.querySelector('#resized-card h3').innerText = 'Cut GIF';
-            resizedCard.querySelector('.toggle-card-btn svg').style.transform = 'rotate(0deg)';
-            resizedGifPreview.style.opacity = '0.5';
-
-            const reader = new FileReader();
-            reader.readAsArrayBuffer(currentFile);
-            reader.onload = function (e) {
-                processCut(e.target.result, start, end, document.getElementById('loading-overlay'));
-            };
-        });
-    }
-
-    function processCut(buffer, startIdx, endIdx, loadingOverlay) {
-        const ReaderClass = window.GifReader || (window.omggif && window.omggif.GifReader) || (window.Omggif && window.Omggif.GifReader);
-        if (!ReaderClass) return;
-
-        const reader = new ReaderClass(new Uint8Array(buffer));
-        const width = reader.width;
-        const height = reader.height;
-
-        const workerBlob = new Blob([gifWorkerScript], { type: 'application/javascript' });
-        const gif = new GIF({
-            workers: 2,
-            quality: 10,
-            width: width,
-            height: height,
-            workerScript: URL.createObjectURL(workerBlob)
-        });
-
-        const totalFrames = endIdx - startIdx + 1;
-        let processed = 0;
-
-        const tempCanvas = document.createElement('canvas'); // Composition Canvas
-        tempCanvas.width = width;
-        tempCanvas.height = height;
-        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-
-        let decodeIdx = 0;
-        const buf = new Uint8ClampedArray(width * height * 4);
-
-        function renderLoop() {
-            if (decodeIdx > endIdx) {
-                gif.render();
-                return;
-            }
-
-            const info = reader.frameInfo(decodeIdx);
-
-            reader.decodeAndBlitFrameRGBA(decodeIdx, buf);
-            const imgData = new ImageData(buf, width, height);
-            tempCtx.putImageData(imgData, 0, 0);
-
-            if (decodeIdx >= startIdx) {
-                gif.addFrame(tempCtx, { delay: info.delay * 10, copy: true });
-                processed++;
-
-                // Progress
-                const p = (processed / totalFrames) * 100; // Prep progress
-                const pFill = document.getElementById('cut-progress-fill');
-                const pText = document.getElementById('cut-progress-text');
-                if (pFill) pFill.style.width = (p * 0.5) + '%';
-                if (pText) pText.innerText = Math.round(p * 0.5) + '%';
-            }
-
-            decodeIdx++;
-            setTimeout(renderLoop, 0);
-        }
-
-        renderLoop();
-
-        gif.on('progress', (p) => {
-            const prog = 50 + (p * 50);
-            const pFill = document.getElementById('cut-progress-fill');
-            const pText = document.getElementById('cut-progress-text');
-            if (pFill) pFill.style.width = prog + '%';
-            if (pText) pText.innerText = Math.round(prog) + '%';
-        });
-
-        gif.on('finished', (blob) => {
-            if (loadingOverlay) loadingOverlay.classList.add('hidden');
-            currentResizedBlob = blob;
-            resizedGifPreview.src = URL.createObjectURL(blob);
-            resizedGifPreview.style.opacity = '1';
-
-            const sizeMB = (blob.size / (1024 * 1024)).toFixed(2);
-            // Calculate Savings
-            const savedBytes = currentFile.size - blob.size;
-            const savedPct = ((savedBytes / currentFile.size) * 100).toFixed(1);
-            let resultNote = '';
-            if (savedBytes > 0) resultNote = `<span style="color:var(--secondary-color); font-weight:bold;">(-${savedPct}%)</span>`;
-            else resultNote = `<span style="color:var(--accent-color);">(${savedPct}%)</span>`;
-
-            resizedGifInfoContainer.innerHTML = `
-                <div class="info-item"><span class="info-label">Dimens</span><span class="info-value">${width} x ${height}</span></div>
-                <div class="info-item"><span class="info-label">Size</span><span class="info-value">${sizeMB} MB ${resultNote}</span></div>
-                <div class="info-item"><span class="info-label">Frames</span><span class="info-value">${totalFrames}</span></div>
-                <div class="info-item"><span class="info-label">Range</span><span class="info-value">${startIdx + 1} - ${endIdx + 1}</span></div>
-            `;
-
-            // Auto-nav
-            const pContainer = document.getElementById('cut-progress-container');
-            if (pContainer) pContainer.classList.add('hidden');
-
-            document.getElementById('cut-panel').classList.add('hidden');
-            mainToolsGrid.classList.remove('hidden');
-            mainToolsGrid.style.display = 'grid';
-
-            cutGoBtn.disabled = false;
-            cutBackBtn.disabled = false;
-
-            const newFileName = `cut_${Date.now()}.gif`;
-            currentFile = new File([blob], newFileName, { type: 'image/gif' });
-        });
-    }
 
     // --- OPTIMIZE TOOL Logic ---
     const optimizePanel = document.getElementById('optimize-panel');
@@ -2730,6 +2419,254 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // End of Crop Tool Logic
 
+
+    // --- CUT TOOL Logic ---
+    const cutPanel = document.getElementById('cut-panel');
+    const cutBtn = document.querySelector('button[data-tool="cut"]');
+    const cutBackBtn = document.getElementById('cut-back-btn');
+    const cutGoBtn = document.getElementById('cut-go-btn');
+
+    // Sliders
+    const cutSliderStart = document.getElementById('cut-start-slider');
+    const cutSliderEnd = document.getElementById('cut-end-slider');
+    const cutRangeHighlight = document.getElementById('cut-range-highlight');
+
+    // Previews
+    const cutStartPreview = document.getElementById('cut-start-preview');
+    const cutEndPreview = document.getElementById('cut-end-preview');
+    const cutStartFrameText = document.getElementById('cut-start-frame-text');
+    const cutEndFrameText = document.getElementById('cut-end-frame-text');
+
+    let totalFrames = 0;
+
+    // Open Cut Panel
+    if (cutBtn) {
+        cutBtn.addEventListener('click', () => {
+            if (!currentFile) return;
+            initCutTool();
+            mainToolsGrid.classList.add('hidden');
+            cutPanel.classList.remove('hidden');
+        });
+    }
+
+    if (cutBackBtn) {
+        cutBackBtn.addEventListener('click', () => {
+            cutPanel.classList.add('hidden');
+            mainToolsGrid.classList.remove('hidden');
+        });
+    }
+
+    function initCutTool() {
+        if (!currentFile) return;
+
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(currentFile);
+        reader.onload = function (e) {
+            const buffer = e.target.result;
+            // Use omggif to read info
+            const ReaderClass = window.GifReader || (window.omggif && window.omggif.GifReader) || (window.Omggif && window.Omggif.GifReader);
+            if (!ReaderClass) return;
+
+            const gifReader = new ReaderClass(new Uint8Array(buffer));
+            totalFrames = gifReader.numFrames();
+
+            // Init Sliders
+            cutSliderStart.min = 0;
+            cutSliderStart.max = totalFrames - 1;
+            cutSliderStart.value = 0;
+
+            cutSliderEnd.min = 0;
+            cutSliderEnd.max = totalFrames - 1;
+            cutSliderEnd.value = totalFrames - 1;
+
+            updateRangeHighlight();
+            updateCutPreview(gifReader, 0, 'start');
+            updateCutPreview(gifReader, totalFrames - 1, 'end');
+
+            // Re-assign oninput
+            cutSliderStart.oninput = (e) => {
+                let val = parseInt(e.target.value);
+                const endVal = parseInt(cutSliderEnd.value);
+
+                if (val >= endVal) {
+                    val = endVal - 1;
+                    if (val < 0) val = 0;
+                    e.target.value = val;
+                }
+
+                updateRangeHighlight();
+                updateCutPreview(gifReader, val, 'start');
+            };
+
+            cutSliderEnd.oninput = (e) => {
+                let val = parseInt(e.target.value);
+                const startVal = parseInt(cutSliderStart.value);
+
+                if (val <= startVal) {
+                    val = startVal + 1;
+                    if (val >= totalFrames) val = totalFrames - 1;
+                    e.target.value = val;
+                }
+
+                updateRangeHighlight();
+                updateCutPreview(gifReader, val, 'end');
+            };
+
+            // Go Button
+            cutGoBtn.onclick = () => {
+                const start = parseInt(cutSliderStart.value);
+                const end = parseInt(cutSliderEnd.value);
+                processCut(buffer, start, end);
+            };
+        };
+    }
+
+    function updateRangeHighlight() {
+        if (!cutSliderStart || !cutSliderEnd) return;
+        const start = parseInt(cutSliderStart.value);
+        const end = parseInt(cutSliderEnd.value);
+        const max = parseInt(cutSliderStart.max);
+
+        if (max === 0) return;
+
+        const leftPercent = (start / max) * 100;
+        const widthPercent = ((end - start) / max) * 100;
+
+        cutRangeHighlight.style.left = leftPercent + '%';
+        cutRangeHighlight.style.width = widthPercent + '%';
+    }
+
+    function updateCutPreview(reader, frameIndex, type) {
+        const canvas = document.createElement('canvas');
+        canvas.width = reader.width;
+        canvas.height = reader.height;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(reader.width, reader.height);
+
+        reader.decodeAndBlitFrameRGBA(frameIndex, imageData.data);
+        ctx.putImageData(imageData, 0, 0);
+
+        const url = canvas.toDataURL();
+
+        if (type === 'start') {
+            cutStartPreview.src = url;
+            cutStartFrameText.innerText = frameIndex;
+        } else {
+            cutEndPreview.src = url;
+            cutEndFrameText.innerText = frameIndex;
+        }
+    }
+
+    function processCut(buffer, startFrame, endFrame) {
+        cutGoBtn.disabled = true;
+        cutBackBtn.disabled = true;
+
+        document.getElementById('cut-progress-container').classList.remove('hidden');
+        cutPanel.classList.add('hidden');
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        loadingOverlay.classList.remove('hidden');
+
+        resizedCard.classList.remove('hidden'); // Re-use output card
+
+        // Use GIF.js to re-encode
+        const ReaderClass = window.GifReader || (window.omggif && window.omggif.GifReader) || (window.Omggif && window.Omggif.GifReader);
+        if (!ReaderClass) {
+            alert('Error: GIF Reader not found');
+            return;
+        }
+
+        const reader = new ReaderClass(new Uint8Array(buffer));
+        const width = reader.width;
+        const height = reader.height;
+
+        // Init GIF encoder
+        const workerBlob = new Blob([gifWorkerScript], { type: 'application/javascript' });
+        const gif = new GIF({
+            workers: 2,
+            quality: 10,
+            width: width,
+            height: height,
+            workerScript: URL.createObjectURL(workerBlob)
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const imageData = ctx.createImageData(width, height);
+
+        // Pre-fill buffer to startFrame state to handle composition/transparency correctly
+        // omggif's decodeAndBlit composites onto the provided array
+        for (let i = 0; i < startFrame; i++) {
+            reader.decodeAndBlitFrameRGBA(i, imageData.data);
+        }
+
+        let currentFrame = startFrame;
+        const totalFramesToProcess = endFrame - startFrame + 1;
+        let processedCount = 0;
+
+        function processNext() {
+            try {
+                if (currentFrame > endFrame) {
+                    gif.render();
+                    return;
+                }
+
+                reader.decodeAndBlitFrameRGBA(currentFrame, imageData.data);
+                ctx.putImageData(imageData, 0, 0);
+
+                const frameInfo = reader.frameInfo(currentFrame);
+
+                // Add frame with copy:true to persist the canvas state
+                gif.addFrame(ctx, { copy: true, delay: frameInfo.delay * 10 });
+
+                processedCount++;
+                currentFrame++;
+
+                // Update Progress
+                const pct = Math.round((processedCount / totalFramesToProcess) * 100);
+                document.getElementById('cut-progress-fill').style.width = pct + '%';
+                document.getElementById('cut-progress-text').innerText = pct + '%';
+
+                setTimeout(processNext, 0);
+            } catch (err) {
+                console.error("Cut Processing Error:", err);
+                alert("Error during processing: " + err.message);
+                loadingOverlay.classList.add('hidden');
+                cutGoBtn.disabled = false;
+            }
+        }
+
+        processNext();
+
+        gif.on('finished', (blob) => {
+            loadingOverlay.classList.add('hidden');
+            document.getElementById('cut-progress-container').classList.add('hidden');
+
+            currentResizedBlob = blob;
+            resizedGifPreview.src = URL.createObjectURL(blob);
+            resizedGifPreview.style.opacity = '1';
+
+            // Stats
+            const sizeMB = (blob.size / (1024 * 1024)).toFixed(2);
+            resizedGifInfoContainer.innerHTML = `
+                <div class="info-item"><span class="info-label">Frames</span><span class="info-value">${processedCount}</span></div>
+                <div class="info-item"><span class="info-label">Size</span><span class="info-value">${sizeMB} MB</span></div>
+                <div class="info-item"><span class="info-label">Range</span><span class="info-value">${startFrame} - ${endFrame}</span></div>
+            `;
+
+            // Buttons
+            cutGoBtn.disabled = false;
+            cutBackBtn.disabled = false;
+
+            mainToolsGrid.classList.remove('hidden');
+
+            // Update Global
+            const newFileName = `cut_${Date.now()}.gif`;
+            currentFile = new File([blob], newFileName, { type: 'image/gif' });
+        });
+    }
 
 });
 

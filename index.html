@@ -559,13 +559,36 @@
                             <h4>Cut Options</h4>
                         </div>
 
-                        <div class="cutoff-panel-content">
-                            <!-- Helper Text or basic cutoff timeline if implemented here or via JS injection -->
-                            <p style="text-align:center; color:var(--text-secondary); padding:1rem;">
-                                Select start/end points on the timeline below (if available) or use controls.
-                            </p>
-                            <!-- If the cut tool has more specific controls, valid to place here. 
-                                 For now just wrapping the buttons as requested to hide them. -->
+                        <div class="cut-preview-container">
+                            <div class="cut-preview-item">
+                                <span class="frame-counter" id="cut-start-frame-text">0</span>
+                                <div class="preview-box">
+                                    <img id="cut-start-preview" src="" alt="">
+                                </div>
+                            </div>
+                            <div class="cut-preview-item">
+                                <span class="frame-counter" id="cut-end-frame-text">0</span>
+                                <div class="preview-box">
+                                    <img id="cut-end-preview" src="" alt="">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cut-controls">
+                            <label class="control-label">Select Range</label>
+                            <div class="dual-range-container">
+                                <div class="range-track"></div>
+                                <div class="range-highlight" id="cut-range-highlight"></div>
+                                <input type="range" id="cut-start-slider" min="0" max="100" value="0">
+                                <input type="range" id="cut-end-slider" min="0" max="100" value="100">
+                            </div>
+                        </div>
+
+                        <div class="progress-container hidden" id="cut-progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="cut-progress-fill" style="width: 0%"></div>
+                            </div>
+                            <span class="progress-text" id="cut-progress-text">0%</span>
                         </div>
 
                         <div class="panel-actions">
