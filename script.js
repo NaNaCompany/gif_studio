@@ -2335,7 +2335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const allToolBtns = document.querySelectorAll('.tool-btn');
     allToolBtns.forEach(btn => {
         const tool = btn.dataset.tool;
-        if (tool !== 'resize' && tool !== 'crop' && tool !== 'downsize' && tool !== 'rotate' && tool !== 'reverse' && tool !== 'speed' && tool !== 'optimize' && tool !== 'cut') {
+        if (tool !== 'resize' && tool !== 'crop' && tool !== 'downsize' && tool !== 'rotate' && tool !== 'reverse' && tool !== 'speed' && tool !== 'optimize' && tool !== 'cut' && tool !== 'convert') {
             btn.addEventListener('click', () => {
                 // Set Title
                 const toolName = tool.charAt(0).toUpperCase() + tool.slice(1);
@@ -2413,7 +2413,197 @@ document.addEventListener('DOMContentLoaded', () => {
     // End of Crop Tool Logic
 
 
-    // --- CUT TOOL Logic ---
+    // --- CONVERT TOOL Logic ---
+    const convertPanel = document.getElementById('convert-panel');
+    const convertBtn = document.querySelector('button[data-tool="convert"]');
+    const convertBackBtn = document.getElementById('convert-back-btn');
+    const convertGoBtn = document.getElementById('convert-go-btn');
+    const convertProgress = document.getElementById('convert-progress-container');
+    const convertProgressFill = document.getElementById('convert-progress-fill');
+    const convertProgressText = document.getElementById('convert-progress-text');
+    const convertStatusText = document.getElementById('convert-status-text');
+
+    if (convertBtn) {
+        convertBtn.addEventListener('click', () => {
+            mainToolsGrid.classList.add('hidden');
+            convertPanel.classList.remove('hidden');
+        });
+    }
+
+    if (convertBackBtn) {
+        convertBackBtn.addEventListener('click', () => {
+            convertPanel.classList.add('hidden');
+            mainToolsGrid.classList.remove('hidden');
+        });
+    }
+
+    if (convertGoBtn) {
+        convertGoBtn.addEventListener('click', () => {
+            if (!currentFile) return;
+
+            // Get Format
+            const format = document.querySelector('input[name="convert-format"]:checked').value; // mp4, webp, jpg
+
+            // UI Setup
+            convertGoBtn.disabled = true;
+            convertBackBtn.disabled = true;
+            convertProgress.classList.remove('hidden');
+            convertProgressFill.style.width = '0%';
+            convertProgressText.innerText = '0%';
+            convertStatusText.innerText = 'Preparing...';
+
+            // HIDE LEFT PANEL (Preview Area)
+            document.querySelector('.preview-area').classList.add('hidden');
+            // Center Control Panel (Optional, but "hidden" effectively removes layout space if flex)
+            // editor-layout is flex. If preview-area is hidden, control-panel takes left or full width depending on css.
+            // .preview-area { flex: 1; } .control-panel { width: 350px; }
+            // If preview-area is display:none, control-panel stays 350px on left. 
+            // To Center: .editor-layout { justify-content: center; } could be added dynamically or just leave as is.
+
+            const reader = new FileReader();
+            reader.readAsArrayBuffer(currentFile);
+            reader.onload = function (e) {
+                processConvert(e.target.result, format);
+            };
+        });
+    }
+
+    function processConvert(buffer, format) {
+        const ReaderClass = window.GifReader || (window.omggif && window.omggif.GifReader) || (window.Omggif && window.Omggif.GifReader);
+        if (!ReaderClass) {
+            alert('GIF Reader not found');
+            resetConvertUI();
+            return;
+        }
+
+        const reader = new ReaderClass(new Uint8Array(buffer));
+        const width = reader.width;
+        const height = reader.height;
+        const framesCount = reader.numFrames();
+
+        // Canvas for Rendering
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(width, height);
+
+        if (format === 'jpg') {
+            // Still Image (Frame 0)
+            convertStatusText.innerText = 'Extracting Frame...';
+            convertProgressFill.style.width = '50%';
+            convertProgressText.innerText = '50%';
+
+            setTimeout(() => {
+                // Decode Frame 0
+                reader.decodeAndBlitFrameRGBA(0, imageData.data);
+                ctx.putImageData(imageData, 0, 0);
+
+                // Export
+                let mime = 'image/jpeg';
+                canvas.toBlob((blob) => {
+                    convertProgressFill.style.width = '100%';
+                    convertProgressText.innerText = '100%';
+                    convertStatusText.innerText = 'Done!';
+
+                    const filename = `converted_${Date.now()}.${format}`;
+                    downloadBlob(blob, filename);
+
+                    setTimeout(resetConvertUI, 1000);
+                }, mime, 0.9); // Quality 0.9
+            }, 100);
+
+        } else if (format === 'mp4' || format === 'webm') {
+            // Video Recording
+            convertStatusText.innerText = 'Recording Video...';
+
+            // MediaRecorder Setup
+            const stream = canvas.captureStream(30); // 30 FPS Stream
+            let mimeType = 'video/mp4';
+            if (format === 'webm' || !MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm'; // Fallback or requested
+            }
+
+            // Check capabilities
+            // Note: If user wants MP4 but browser only supports WebM, we give WebM.
+            // If user wants WebM, we give WebM.
+
+            let recorder;
+            try {
+                recorder = new MediaRecorder(stream, { mimeType: mimeType });
+            } catch (e) {
+                // Fallback to minimal if mimeType failed
+                recorder = new MediaRecorder(stream);
+            }
+
+            const chunks = [];
+
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: mimeType });
+                // Extension
+                let ext = 'mp4';
+                if (mimeType.includes('webm')) ext = 'webm';
+
+                convertProgressFill.style.width = '100%';
+                convertProgressText.innerText = '100%';
+                convertStatusText.innerText = 'Done!';
+
+                downloadBlob(blob, `converted_${Date.now()}.${ext}`);
+                setTimeout(resetConvertUI, 1000);
+            };
+
+            recorder.start();
+
+            // Play frames
+            let frameIndex = 0;
+            // Loop? No, convert usually does one pass.
+
+            function playNext() {
+                if (frameIndex >= framesCount) {
+                    recorder.stop();
+                    return;
+                }
+
+                // Decode & Draw
+                reader.decodeAndBlitFrameRGBA(frameIndex, imageData.data);
+                ctx.putImageData(imageData, 0, 0);
+
+                // Progress
+                const pct = Math.round((frameIndex / framesCount) * 100);
+                convertProgressFill.style.width = pct + '%';
+                convertProgressText.innerText = pct + '%';
+
+                const info = reader.frameInfo(frameIndex);
+                const delay = info.delay * 10; // ms
+
+                frameIndex++;
+                setTimeout(playNext, delay);
+            }
+
+            playNext();
+        }
+    }
+
+    function resetConvertUI() {
+        // Reset Buttons
+        convertGoBtn.disabled = false;
+        convertBackBtn.disabled = false;
+        convertProgress.classList.add('hidden');
+
+        // Show Left Panel Again? 
+        // "Convert기능 사용중에는 왼쪽 캔버스 패널은 만들지 않음"
+        // After convert is done, should we return to normal state? Usually yes.
+        document.querySelector('.preview-area').classList.remove('hidden');
+
+        // Hide convert panel?
+        convertPanel.classList.add('hidden');
+        mainToolsGrid.classList.remove('hidden');
+    }
+
     const cutPanel = document.getElementById('cut-panel');
     const cutBtn = document.querySelector('button[data-tool="cut"]');
     const cutBackBtn = document.getElementById('cut-back-btn');

@@ -796,4 +796,58 @@ body {
     color: #dc2626;
     /* Red for positive/increase */
     font-weight: 600;
-}
+
+    /* Convert Tool Styles */
+    .format-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .format-card {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .format-card input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .format-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem 0.5rem;
+        background: var(--bg-color);
+        border: 2px solid var(--border-color);
+        border-radius: 1rem;
+        transition: all 0.2s ease;
+        height: 100%;
+    }
+
+    .format-ext {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 0.25rem;
+    }
+
+    .format-name {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .format-card input:checked+.format-content {
+        border-color: var(--primary-color);
+        background: #eef2ff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
+    }
+
+    .format-card input:checked+.format-content .format-ext {
+        color: var(--primary-color);
+    }
