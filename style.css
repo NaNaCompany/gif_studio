@@ -9,6 +9,113 @@
     --font-family: 'Outfit', sans-serif;
 }
 
+/* Floating Banner */
+.floating-banner {
+    position: fixed;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.floating-banner-under {
+    position: fixed;
+    right: 50%;
+    top: auto;
+    bottom: 20px;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    width: max-content;
+    transform: translateX(50%);
+}
+
+.floating-banner:hover {
+    transform: translateY(-50%) scale(1.05) translateX(-5px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+
+.floating-banner-under:hover {
+    transform: translateX(50%) scale(1.05);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+@media (max-width: 768px) {
+    .floating-banner {
+        bottom: 20px;
+        top: auto;
+        right: 50%;
+        transform: translateX(50%);
+        width: max-content;
+    }
+
+    .floating-banner:hover {
+        transform: translateX(50%) scale(1.05);
+    }
+}
+
+.floating-banner::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: translateX(-100%);
+    transition: 0.5s;
+}
+
+.floating-banner:hover::after {
+    transform: translateX(100%);
+}
+
+.floating-banner-under::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: translateX(-100%);
+    transition: 0.5s;
+}
+
+.floating-banner-under:hover::after {
+    transform: translateX(100%);
+}
+
 * {
     margin: 0;
     padding: 0;
